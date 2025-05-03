@@ -1,6 +1,5 @@
-
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   AlarmClock, 
   Moon, 
@@ -8,10 +7,12 @@ import {
   Clock, 
   User,
   ArrowLeft,
-  ArrowRight
+  ArrowRight,
+  LogOut
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth.tsx";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -19,10 +20,17 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const isActivePath = (path: string) => {
     return location.pathname === path;
+  };
+
+  const handleSignOut = () => {
+    logout();
+    navigate('/login');
   };
 
   const navItems = [
@@ -79,13 +87,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             ))}
           </nav>
           
-          {/* Footer */}
+          {/* Sign Out Button */}
           <div className="p-4 border-t border-border">
-            {sidebarOpen && (
-              <div className="text-xs text-muted-foreground">
-                Sweet dreams await
-              </div>
-            )}
+            <Button
+              variant="ghost"
+              className={cn(
+                "w-full flex items-center px-3 py-2 rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent",
+                !sidebarOpen && "justify-center"
+              )}
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-5 h-5" />
+              {sidebarOpen && <span className="ml-3">Sign Out</span>}
+            </Button>
           </div>
         </div>
       </div>

@@ -10,41 +10,61 @@ import { QualityAssessment } from "./components/QualityAssessment";
 import { SleepSummary } from "./components/SleepSummary";
 import { Layout } from "./components/Layout";
 import { UserProfile } from "./components/UserProfile";
+import { Login } from "./pages/Login";
+import { SignUp } from "./pages/SignUp";
+import { AuthMiddleware } from "./middleware/auth";
+import { AuthProvider } from "@/lib/auth.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/log" element={
-            <Layout>
-              <SleepLogger />
-            </Layout>
-          } />
-          <Route path="/assessment" element={
-            <Layout>
-              <QualityAssessment />
-            </Layout>
-          } />
-          <Route path="/summary" element={
-            <Layout>
-              <SleepSummary />
-            </Layout>
-          } />
-          <Route path="/profile" element={
-            <Layout>
-              <UserProfile />
-            </Layout>
-          } />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<SignUp />} />
+            <Route path="/" element={
+              <AuthMiddleware>
+                <Index />
+              </AuthMiddleware>
+            } />
+            <Route path="/log" element={
+              <AuthMiddleware>
+                <Layout>
+                  <SleepLogger />
+                </Layout>
+              </AuthMiddleware>
+            } />
+            <Route path="/assessment" element={
+              <AuthMiddleware>
+                <Layout>
+                  <QualityAssessment />
+                </Layout>
+              </AuthMiddleware>
+            } />
+            <Route path="/summary" element={
+              <AuthMiddleware>
+                <Layout>
+                  <SleepSummary />
+                </Layout>
+              </AuthMiddleware>
+            } />
+            <Route path="/profile" element={
+              <AuthMiddleware>
+                <Layout>
+                  <UserProfile />
+                </Layout>
+              </AuthMiddleware>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
