@@ -58,7 +58,7 @@ export const SleepLogger: React.FC = () => {
   };
 
   return (
-    <div className="animate-fade-in max-w-xl mx-auto space-y-6">
+    <div className="animate-fade-in max-w-xl mx-auto px-4 md:px-0 space-y-6 pt-[64px]">
       <div>
         <h1 className="text-3xl font-bold">Log Your Sleep</h1>
         <p className="text-muted-foreground">Track your sleep patterns for better insights</p>
