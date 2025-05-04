@@ -89,42 +89,42 @@ export const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className="container max-w-2xl mx-auto py-8 px-4">
-      <Card className="sleep-card">
+    <div className="w-full max-w-2xl mx-auto py-4 px-2 sm:py-8 sm:px-4">
+      <Card className="sleep-card w-full">
         <CardHeader>
-          <CardTitle className="text-3xl">Profile Settings</CardTitle>
-          <CardDescription className="text-xl">Manage your account preferences and sleep data</CardDescription>
+          <CardTitle className="text-xl">Profile Settings</CardTitle>
+          <CardDescription className="text-base">Manage your account preferences and sleep data</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8 text-lg">
-          <div className="space-y-6">
-            <h3 className="text-2xl font-bold">User Preferences</h3>
-            <div className="space-y-4">
-              <Label htmlFor="name" className="text-xl font-semibold">Name</Label>
+        <CardContent className="space-y-4 sm:space-y-8 text-sm">
+          <div className="space-y-4 sm:space-y-6">
+            <h3 className="text-lg font-bold">User Preferences</h3>
+            <div className="space-y-2 sm:space-y-4">
+              <Label htmlFor="name" className="text-base font-semibold">Name</Label>
               <Input
                 id="name"
-                className="text-3xl h-16"
+                className="text-lg h-10 w-full"
                 value={preferences?.name || ''}
                 onChange={(e) => setPreferences({ ...preferences!, name: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
-            <div className="space-y-4">
-              <Label htmlFor="dailySleepGoal" className="text-xl font-semibold">Daily Sleep Goal (hours)</Label>
+            <div className="space-y-2 sm:space-y-4">
+              <Label htmlFor="dailySleepGoal" className="text-base font-semibold">Daily Sleep Goal (hours)</Label>
               <Input
                 id="dailySleepGoal"
                 type="number"
-                className="text-3xl h-16"
+                className="text-lg h-10 w-full"
                 value={preferences?.dailySleepGoal || 8}
                 onChange={(e) => setPreferences({ ...preferences!, dailySleepGoal: parseInt(e.target.value) })}
                 disabled={!isEditing}
               />
             </div>
-            <div className="space-y-4">
-              <Label htmlFor="preferredBedtime" className="text-xl font-semibold">Preferred Bedtime</Label>
+            <div className="space-y-2 sm:space-y-4">
+              <Label htmlFor="preferredBedtime" className="text-base font-semibold">Preferred Bedtime</Label>
               <Input
                 id="preferredBedtime"
                 type="time"
-                className="text-3xl h-16"
+                className="text-lg h-10 w-full"
                 value={preferences?.preferredBedtime || '22:30'}
                 onChange={(e) => setPreferences({ ...preferences!, preferredBedtime: e.target.value })}
                 disabled={!isEditing}
@@ -132,45 +132,45 @@ export const ProfilePage: React.FC = () => {
             </div>
             <div className="flex justify-end">
               {isEditing ? (
-                <Button onClick={handleSavePreferences} className="bg-sleep-medium hover:bg-sleep-deep text-lg h-12 px-8">
+                <Button onClick={handleSavePreferences} className="bg-sleep-medium hover:bg-sleep-deep text-sm h-8 px-6 w-full">
                   Save Changes
                 </Button>
               ) : (
-                <Button onClick={() => setIsEditing(true)} variant="outline" className="text-lg h-12 px-8">
+                <Button onClick={() => setIsEditing(true)} variant="outline" className="text-sm h-8 px-6 w-full">
                   Edit Preferences
                 </Button>
               )}
             </div>
           </div>
 
-          <div className="space-y-6 pt-8 border-t">
-            <h3 className="text-2xl font-bold">Data Management</h3>
-            <div className="space-y-6">
-              <div className="flex flex-col space-y-4">
-                <Label className="text-xl font-semibold">Export Sleep Data</Label>
-                <Button onClick={handleExportData} variant="outline" className="w-full text-lg h-12">
+          <div className="space-y-4 sm:space-y-6 pt-6 sm:pt-8 border-t">
+            <h3 className="text-lg font-bold">Data Management</h3>
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col space-y-2 sm:space-y-4">
+                <Label className="text-base font-semibold">Export Sleep Data</Label>
+                <Button onClick={handleExportData} variant="outline" className="w-full text-sm h-8">
                   Export to CSV
                 </Button>
               </div>
-              <div className="flex flex-col space-y-4">
-                <Label className="text-xl font-semibold">Import Sleep Data</Label>
-                <div className="flex space-x-2">
+              <div className="flex flex-col space-y-2 sm:space-y-4">
+                <Label className="text-base font-semibold">Import Sleep Data</Label>
+                <div className="flex flex-col sm:flex-row gap-2 sm:space-x-2">
                   <Input
                     type="file"
                     accept=".csv"
                     onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    className="flex-1 text-lg h-12"
+                    className="flex-1 text-sm h-8"
                   />
                   <Button
                     onClick={handleImportData}
                     variant="outline"
                     disabled={!importFile}
-                    className="text-lg h-12"
+                    className="text-sm h-8"
                   >
                     Import
                   </Button>
                 </div>
-                <p className="text-base text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   Import a CSV file containing your sleep data. The file should match the format of exported data.
                 </p>
               </div>

@@ -72,6 +72,10 @@ const processSleepData = (entries: SleepEntry[]) => {
       averages: {
         averageHours: 0,
         averageQuality: 0,
+        averageDeep: 0,
+        averageREM: 0,
+        deepPercent: 0,
+        remPercent: 0
       }
     };
   }
@@ -115,14 +119,14 @@ const processSleepData = (entries: SleepEntry[]) => {
     if (!acc[date]) {
       acc[date] = {
         date,
-        totalHours: hours,
+        totalHours: Math.min(hours, 24),
         totalQuality: entry.sleepQuality || 0,
         count: 1,
         fellAsleepQuickly: entry.fellAsleepQuickly || false,
         wokeUpRefreshed: entry.wokeUpRefreshed || false
       };
     } else {
-      acc[date].totalHours += hours;
+      acc[date].totalHours = Math.min(acc[date].totalHours + hours, 24);
       acc[date].totalQuality += entry.sleepQuality || 0;
       acc[date].count += 1;
       // Use the latest values for fellAsleepQuickly and wokeUpRefreshed
@@ -139,8 +143,11 @@ const processSleepData = (entries: SleepEntry[]) => {
       entry.fellAsleepQuickly,
       entry.wokeUpRefreshed
     );
+    // Parse date as local
+    const [year, month, day] = entry.date.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
     return {
-      day: new Date(entry.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+      day: localDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
       hours: entry.totalHours,
       quality: Math.round(entry.totalQuality / entry.count),
       deepSleep: sleepStages.deepSleep,
@@ -171,14 +178,14 @@ const processSleepData = (entries: SleepEntry[]) => {
     if (!acc[date]) {
       acc[date] = {
         date,
-        totalHours: hours,
+        totalHours: Math.min(hours, 24),
         totalQuality: entry.sleepQuality || 0,
         count: 1,
         fellAsleepQuickly: entry.fellAsleepQuickly || false,
         wokeUpRefreshed: entry.wokeUpRefreshed || false
       };
     } else {
-      acc[date].totalHours += hours;
+      acc[date].totalHours = Math.min(acc[date].totalHours + hours, 24);
       acc[date].totalQuality += entry.sleepQuality || 0;
       acc[date].count += 1;
       // Use the latest values for fellAsleepQuickly and wokeUpRefreshed
@@ -195,36 +202,39 @@ const processSleepData = (entries: SleepEntry[]) => {
       entry.fellAsleepQuickly,
       entry.wokeUpRefreshed
     );
+    // Parse date as local
+    const [year, month, day] = entry.date.split('-').map(Number);
+    const localDate = new Date(year, month - 1, day);
     return {
-      day: new Date(entry.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+      day: localDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
       hours: entry.totalHours,
       quality: Math.round(entry.totalQuality / entry.count),
       deepSleep: sleepStages.deepSleep,
       lightSleep: sleepStages.lightSleep,
       remSleep: sleepStages.remSleep,
-  };
-});
+    };
+  });
 
   // Calculate averages
   const calculateAverages = (data: typeof weeklyData) => {
     if (data.length === 0) return { averageHours: 0, averageQuality: 0, averageDeep: 0, averageREM: 0, deepPercent: 0, remPercent: 0 };
 
-  const sum = data.reduce(
-    (acc, day) => ({
-        hours: acc.hours + (day.hours || 0),
-        quality: acc.quality + (day.quality || 0),
-        deep: acc.deep + (day.deepSleep || 0),
-        rem: acc.rem + (day.remSleep || 0),
-      }),
-      { hours: 0, quality: 0, deep: 0, rem: 0 }
-    );
-    const averageHours = Math.round((sum.hours / data.length) * 10) / 10;
-    const averageQuality = Math.round(sum.quality / data.length);
-    const averageDeep = Math.round((sum.deep / data.length) * 10) / 10;
-    const averageREM = Math.round((sum.rem / data.length) * 10) / 10;
-    const deepPercent = averageHours ? Math.round((averageDeep / averageHours) * 100) : 0;
-    const remPercent = averageHours ? Math.round((averageREM / averageHours) * 100) : 0;
-    return { averageHours, averageQuality, averageDeep, averageREM, deepPercent, remPercent };
+    const sum = data.reduce(
+      (acc, day) => ({
+          hours: acc.hours + (day.hours || 0),
+          quality: acc.quality + (day.quality || 0),
+          deep: acc.deep + (day.deepSleep || 0),
+          rem: acc.rem + (day.remSleep || 0),
+        }),
+        { hours: 0, quality: 0, deep: 0, rem: 0 }
+      );
+      const averageHours = Math.round((sum.hours / data.length) * 10) / 10;
+      const averageQuality = Math.round(sum.quality / data.length);
+      const averageDeep = Math.round((sum.deep / data.length) * 10) / 10;
+      const averageREM = Math.round((sum.rem / data.length) * 10) / 10;
+      const deepPercent = averageHours ? Math.round((averageDeep / averageHours) * 100) : 0;
+      const remPercent = averageHours ? Math.round((averageREM / averageHours) * 100) : 0;
+      return { averageHours, averageQuality, averageDeep, averageREM, deepPercent, remPercent };
   };
 
   return {
@@ -252,6 +262,20 @@ interface LineTooltipProps {
     name: string;
   }>;
   label?: string;
+}
+
+function getQualityLabel(quality: number) {
+  if (quality >= 85) return "Excellent";
+  if (quality >= 70) return "Good";
+  if (quality >= 50) return "Fair";
+  return "Poor";
+}
+
+function getDurationLabel(hours: number) {
+  if (hours >= 7 && hours <= 9) return "Optimal: 7–9 hours";
+  if (hours > 9) return "Excessive: More than 9 hours";
+  if (hours >= 5) return "Below Recommended: 5–6.9 hours";
+  return "Insufficient: Less than 5 hours";
 }
 
 export const Dashboard: React.FC = () => {
@@ -318,7 +342,7 @@ export const Dashboard: React.FC = () => {
 
   return (
 
-    <div className="pt-[64px] px-4 sm:px-6 md:px-12 space-y-6 animate-fade-in">
+    <div className="pt-[64px] px-2 sm:px-4 md:px-12 space-y-4 sm:space-y-6 animate-fade-in w-full">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-3">Your Sleep Insights</h1>
@@ -380,7 +404,7 @@ export const Dashboard: React.FC = () => {
         </Card>
       )}
 
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-4 sm:space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold mb-3 mt-10">Sleep Summary</h1>
@@ -463,14 +487,14 @@ export const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-lg">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-base sm:text-lg">
                 <Card className="sleep-card">
                   <CardHeader className="p-4">
                     <CardTitle className="text-base">Avg. Sleep Duration</CardTitle>
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="text-3xl font-bold">{sleepData.averages.averageHours} hrs</div>
-                    <div className="text-base text-muted-foreground">Optimal</div>
+                    <div className="text-base text-muted-foreground">{getDurationLabel(sleepData.averages.averageHours)}</div>
                   </CardContent>
                 </Card>
                 <Card className="sleep-card">
@@ -479,7 +503,7 @@ export const Dashboard: React.FC = () => {
                   </CardHeader>
                   <CardContent className="p-4 pt-0">
                     <div className="text-3xl font-bold">{sleepData.averages.averageQuality}%</div>
-                    <div className="text-base text-muted-foreground">Excellent</div>
+                    <div className="text-base text-muted-foreground">{getQualityLabel(sleepData.averages.averageQuality)}</div>
                   </CardContent>
                 </Card>
                 <Card className="sleep-card">
@@ -552,14 +576,14 @@ export const Dashboard: React.FC = () => {
           </Card>
 
           {/* Sleep Averages */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-lg">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 text-base sm:text-lg">
             <Card className="sleep-card">
               <CardHeader className="p-4">
                 <CardTitle className="text-base">Avg. Sleep Duration</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="text-3xl font-bold">{sleepData.averages.averageHours} hrs</div>
-                <div className="text-base text-muted-foreground">Optimal</div>
+                <div className="text-base text-muted-foreground">{getDurationLabel(sleepData.averages.averageHours)}</div>
               </CardContent>
             </Card>
             <Card className="sleep-card">
@@ -568,7 +592,7 @@ export const Dashboard: React.FC = () => {
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className="text-3xl font-bold">{sleepData.averages.averageQuality}%</div>
-                <div className="text-base text-muted-foreground">Excellent</div>
+                <div className="text-base text-muted-foreground">{getQualityLabel(sleepData.averages.averageQuality)}</div>
               </CardContent>
             </Card>
             <Card className="sleep-card">
@@ -619,7 +643,7 @@ export const Dashboard: React.FC = () => {
     </div>
 
       {/* Weekly Stats and Suggestions */}
-      <div className="w-full mt-10">
+      <div className="w-full mt-6 sm:mt-10 px-0 sm:px-2">
         <Card className="sleep-card max-w-10xl mx-auto">
           <CardHeader>
             <CardTitle className="text-2xl md:text-3xl">Sleep Suggestions</CardTitle>

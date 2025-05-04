@@ -36,8 +36,8 @@ export const Login = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[url('/dist/login_background.png')] bg-cover bg-no-repeat bg-center p-4">
-      <div className="w-full max-w-md space-y-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[url('/dist/login_background.png')] bg-cover bg-no-repeat bg-center p-2 sm:p-4">
+      <div className="w-full max-w-md space-y-2 sm:space-y-4">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Moon className="h-8 w-8 text-sleep-medium" />
@@ -48,15 +48,15 @@ export const Login = () => {
           <p className="text-white">Track your sleep patterns for better rest</p>
         </div>
 
-        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl backdrop-blur-sm">
+        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl backdrop-blur-sm w-full p-4 sm:p-8">
           <CardHeader>
             <CardTitle>Login</CardTitle>
             <CardDescription>Enter your credentials to access your account</CardDescription>
           </CardHeader>
           <CardContent>
             {error && <div className="text-red-500 mb-4">{error}</div>}
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
+            <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-4">
+              <div className="space-y-1 sm:space-y-2">
                 <Input
                   type="email"
                   placeholder="Email"
@@ -65,7 +65,7 @@ export const Login = () => {
                   required
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1 sm:space-y-2">
                 <Input
                   type="password"
                   placeholder="Password"

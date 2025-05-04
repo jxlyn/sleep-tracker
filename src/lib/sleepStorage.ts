@@ -117,6 +117,16 @@ export const sleepStorage = {
     const entries = sleepStorage.getAllEntries();
     if (entries.length === 0) return '';
 
+    // Create a map to store unique entries (by date, bedtime, waketime)
+    const uniqueEntries = new Map();
+    entries.forEach(entry => {
+      const key = `${entry.date}|${entry.bedtime}|${entry.waketime}`;
+      uniqueEntries.set(key, entry);
+    });
+
+    // Convert unique entries to array
+    const uniqueEntriesArray = Array.from(uniqueEntries.values());
+
     // CSV header
     const headers = [
       'Date',
@@ -133,7 +143,7 @@ export const sleepStorage = {
     ];
 
     // Convert entries to CSV rows
-    const rows = entries.map(entry => {
+    const rows = uniqueEntriesArray.map(entry => {
       // Calculate total sleep
       const totalSleep = calculateSleepDuration(entry.bedtime, entry.waketime);
       // Use fixed sleep stage calculation
@@ -190,8 +200,17 @@ export const sleepStorage = {
             }
           : undefined;
 
+        // Parse date as local date string (YYYY-MM-DD)
+        let dateStr = values[0];
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          const [year, month, day] = dateStr.split('-').map(Number);
+          const localDate = new Date(year, month - 1, day);
+          // Format back to YYYY-MM-DD to store as local date string
+          dateStr = localDate.toISOString().slice(0, 10);
+        }
+
         const entry: Omit<SleepEntry, 'id'> = {
-          date: values[0],
+          date: dateStr,
           bedtime: values[1],
           waketime: values[2],
           sleepQuality: parseInt(values[3]) || 0,
