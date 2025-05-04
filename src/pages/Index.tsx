@@ -1,8 +1,9 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { Dashboard } from "@/components/Dashboard"
 import { Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { ChevronDown } from "lucide-react"
+import { userStorage } from "@/lib/userStorage"
 
 const IndexPage = () => {
   const today = new Date()
@@ -12,7 +13,15 @@ const IndexPage = () => {
     day: "numeric",
   })
 
-  const userName = "John"
+  const [userName, setUserName] = useState("there")
+
+  useEffect(() => {
+    const preferences = userStorage.getPreferences()
+    if (preferences?.name) {
+      setUserName(preferences.name)
+    }
+  }, [])
+
   return (
     <div className="snap-y snap-mandatory h-screen overflow-y-scroll">
       {/* Section 1: Welcome */}

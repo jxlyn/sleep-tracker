@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Tabs,
@@ -25,70 +24,259 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { SleepCircle } from "@/components/ui/sleep-circle";
 import { SleepBar } from "@/components/ui/sleep-bar";
+import { sleepStorage, SleepEntry } from "@/lib/sleepStorage";
 
-// Mock data for dashboard
-const sleepData = {
-  lastNight: {
-    hours: 7.5,
-    quality: 58,
-    bedTime: "11:30 PM",
-    wakeTime: "7:00 AM",
-    deepSleep: 2.3,
-    lightSleep: 3.7,
-    remSleep: 1.5,
-  },
-  weeklyAverage: {
-    hours: 7.2,
-    quality: 80,
-    trend: "up",
-  },
-  streak: 5,
+const calculateSleepDuration = (bedtime: string, wakeupTime: string) => {
+  const bedDateTime = new Date(`2000-01-01T${bedtime}`);
+  const wakeDateTime = new Date(`2000-01-01T${wakeupTime}`);
+
+  if (wakeDateTime <= bedDateTime) {
+    wakeDateTime.setDate(wakeDateTime.getDate() + 1);
+  }
+
+  const durationMs = wakeDateTime.getTime() - bedDateTime.getTime();
+  return Math.round(durationMs / (1000 * 60 * 60) * 10) / 10;
 };
 
-const weeklyData = [
-  { day: "Mon", hours: 7.2, quality: 82, deepSleep: 2.1, lightSleep: 3.5, remSleep: 1.6 },
-  { day: "Tue", hours: 6.8, quality: 75, deepSleep: 1.8, lightSleep: 3.2, remSleep: 1.8 },
-  { day: "Wed", hours: 7.5, quality: 85, deepSleep: 2.3, lightSleep: 3.7, remSleep: 1.5 },
-  { day: "Thu", hours: 8.0, quality: 90, deepSleep: 2.5, lightSleep: 4.0, remSleep: 1.5 },
-  { day: "Fri", hours: 6.5, quality: 70, deepSleep: 1.7, lightSleep: 3.3, remSleep: 1.5 },
-  { day: "Sat", hours: 8.5, quality: 88, deepSleep: 2.7, lightSleep: 4.2, remSleep: 1.6 },
-  { day: "Sun", hours: 7.8, quality: 85, deepSleep: 2.4, lightSleep: 3.8, remSleep: 1.6 },
-];
+interface BarTooltipProps extends TooltipProps<number, string> {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    name: string;
+    color: string;
+  }>;
+  label?: string;
+}
 
-const monthlyData = Array.from({ length: 30 }, (_, i) => {
-  const day = i + 1;
+const estimateSleepStages = (totalSleep: number, fellAsleepQuickly: boolean, wokeUpRefreshed: boolean) => {
+  const deepPercent = fellAsleepQuickly ? 0.2 : 0.15;
+  const remPercent = wokeUpRefreshed ? 0.25 : 0.2;
+
+  const deepSleep = totalSleep * deepPercent;
+  const remSleep = totalSleep * remPercent;
+  const lightSleep = totalSleep - (deepSleep + remSleep);
+
   return {
-    day: day.toString(),
-    hours: Math.round((Math.random() * 3 + 6) * 10) / 10,
-    quality: Math.round(Math.random() * 30 + 65),
-    deepSleep: Math.round((Math.random() * 1.5 + 1.5) * 10) / 10,
-    lightSleep: Math.round((Math.random() * 1.5 + 3) * 10) / 10,
-    remSleep: Math.round((Math.random() * 0.5 + 1.2) * 10) / 10,
+    deepSleep: Number(deepSleep.toFixed(2)),
+    lightSleep: Number(lightSleep.toFixed(2)),
+    remSleep: Number(remSleep.toFixed(2)),
+  };
+};
+
+const processSleepData = (entries: SleepEntry[]) => {
+  if (entries.length === 0) {
+    return {
+      lastNight: null,
+      weeklyData: [],
+      monthlyData: [],
+      averages: {
+        averageHours: 0,
+        averageQuality: 0,
+      }
+    };
+  }
+
+  // Sort entries by date (oldest to newest)
+  const sortedEntries = [...entries].sort((a, b) =>
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  );
+
+  // Get last night's sleep (date before today)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const lastNightEntry = sortedEntries.find(entry => {
+    const entryDate = new Date(entry.date);
+    entryDate.setHours(0, 0, 0, 0);
+    return entryDate.getTime() === yesterday.getTime();
+  });
+
+  // Process weekly data
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const weeklyEntries = sortedEntries.filter(entry =>
+    new Date(entry.date) >= oneWeekAgo
+  );
+
+  // Combine multiple entries for the same date
+  const combinedWeeklyEntries = weeklyEntries.reduce((acc: Record<string, {
+    date: string;
+    totalHours: number;
+    totalQuality: number;
+    count: number;
+    fellAsleepQuickly: boolean;
+    wokeUpRefreshed: boolean;
+  }>, entry) => {
+    const date = entry.date;
+    const hours = calculateSleepDuration(entry.bedtime, entry.waketime);
+
+    if (!acc[date]) {
+      acc[date] = {
+        date,
+        totalHours: hours,
+        totalQuality: entry.sleepQuality || 0,
+        count: 1,
+        fellAsleepQuickly: entry.fellAsleepQuickly || false,
+        wokeUpRefreshed: entry.wokeUpRefreshed || false
+      };
+    } else {
+      acc[date].totalHours += hours;
+      acc[date].totalQuality += entry.sleepQuality || 0;
+      acc[date].count += 1;
+      // Use the latest values for fellAsleepQuickly and wokeUpRefreshed
+      acc[date].fellAsleepQuickly = entry.fellAsleepQuickly || false;
+      acc[date].wokeUpRefreshed = entry.wokeUpRefreshed || false;
+    }
+
+    return acc;
+  }, {});
+
+  const weeklyData = Object.values(combinedWeeklyEntries).map(entry => {
+    const sleepStages = estimateSleepStages(
+      entry.totalHours,
+      entry.fellAsleepQuickly,
+      entry.wokeUpRefreshed
+    );
+    return {
+      day: new Date(entry.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+      hours: entry.totalHours,
+      quality: Math.round(entry.totalQuality / entry.count),
+      deepSleep: sleepStages.deepSleep,
+      lightSleep: sleepStages.lightSleep,
+      remSleep: sleepStages.remSleep,
+    };
+  });
+
+  // Process monthly data
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+  const monthlyEntries = sortedEntries.filter(entry =>
+    new Date(entry.date) >= oneMonthAgo
+  );
+
+  // Combine multiple entries for the same date
+  const combinedMonthlyEntries = monthlyEntries.reduce((acc: Record<string, {
+    date: string;
+    totalHours: number;
+    totalQuality: number;
+    count: number;
+    fellAsleepQuickly: boolean;
+    wokeUpRefreshed: boolean;
+  }>, entry) => {
+    const date = entry.date;
+    const hours = calculateSleepDuration(entry.bedtime, entry.waketime);
+
+    if (!acc[date]) {
+      acc[date] = {
+        date,
+        totalHours: hours,
+        totalQuality: entry.sleepQuality || 0,
+        count: 1,
+        fellAsleepQuickly: entry.fellAsleepQuickly || false,
+        wokeUpRefreshed: entry.wokeUpRefreshed || false
+      };
+    } else {
+      acc[date].totalHours += hours;
+      acc[date].totalQuality += entry.sleepQuality || 0;
+      acc[date].count += 1;
+      // Use the latest values for fellAsleepQuickly and wokeUpRefreshed
+      acc[date].fellAsleepQuickly = entry.fellAsleepQuickly || false;
+      acc[date].wokeUpRefreshed = entry.wokeUpRefreshed || false;
+    }
+
+    return acc;
+  }, {});
+
+  const monthlyData = Object.values(combinedMonthlyEntries).map(entry => {
+    const sleepStages = estimateSleepStages(
+      entry.totalHours,
+      entry.fellAsleepQuickly,
+      entry.wokeUpRefreshed
+    );
+    return {
+      day: new Date(entry.date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+      hours: entry.totalHours,
+      quality: Math.round(entry.totalQuality / entry.count),
+      deepSleep: sleepStages.deepSleep,
+      lightSleep: sleepStages.lightSleep,
+      remSleep: sleepStages.remSleep,
   };
 });
 
-const calculateAverages = (data) => {
+  // Calculate averages
+  const calculateAverages = (data: typeof weeklyData) => {
+    if (data.length === 0) return { averageHours: 0, averageQuality: 0, averageDeep: 0, averageREM: 0, deepPercent: 0, remPercent: 0 };
+
   const sum = data.reduce(
     (acc, day) => ({
-      hours: acc.hours + day.hours,
-      quality: acc.quality + day.quality,
-      deepSleep: acc.deepSleep + day.deepSleep,
-      lightSleep: acc.lightSleep + day.lightSleep,
-      remSleep: acc.remSleep + day.remSleep,
-    }),
-    { hours: 0, quality: 0, deepSleep: 0, lightSleep: 0, remSleep: 0 }
-  );
+        hours: acc.hours + (day.hours || 0),
+        quality: acc.quality + (day.quality || 0),
+        deep: acc.deep + (day.deepSleep || 0),
+        rem: acc.rem + (day.remSleep || 0),
+      }),
+      { hours: 0, quality: 0, deep: 0, rem: 0 }
+    );
+    const averageHours = Math.round((sum.hours / data.length) * 10) / 10;
+    const averageQuality = Math.round(sum.quality / data.length);
+    const averageDeep = Math.round((sum.deep / data.length) * 10) / 10;
+    const averageREM = Math.round((sum.rem / data.length) * 10) / 10;
+    const deepPercent = averageHours ? Math.round((averageDeep / averageHours) * 100) : 0;
+    const remPercent = averageHours ? Math.round((averageREM / averageHours) * 100) : 0;
+    return { averageHours, averageQuality, averageDeep, averageREM, deepPercent, remPercent };
+  };
 
   return {
-    averageHours: Math.round((sum.hours / data.length) * 10) / 10,
-    averageQuality: Math.round(sum.quality / data.length),
-    averageDeepSleep: Math.round((sum.deepSleep / data.length) * 10) / 10,
-    averageLightSleep: Math.round((sum.lightSleep / data.length) * 10) / 10,
-    averageRemSleep: Math.round((sum.remSleep / data.length) * 10) / 10,
+    lastNight: lastNightEntry ? {
+      hours: calculateSleepDuration(lastNightEntry.bedtime, lastNightEntry.waketime),
+      quality: lastNightEntry.sleepQuality || 0,
+      bedTime: lastNightEntry.bedtime,
+      wakeTime: lastNightEntry.waketime,
+      ...estimateSleepStages(
+        calculateSleepDuration(lastNightEntry.bedtime, lastNightEntry.waketime),
+        lastNightEntry.fellAsleepQuickly || false,
+        lastNightEntry.wokeUpRefreshed || false
+      ),
+    } : null,
+    weeklyData,
+    monthlyData,
+    averages: calculateAverages(weeklyData),
   };
 };
 
+interface LineTooltipProps {
+  active?: boolean;
+  payload?: Array<{
+    value: number;
+    name: string;
+  }>;
+  label?: string;
+}
+
 export const Dashboard: React.FC = () => {
+  const [period, setPeriod] = useState<"week" | "month">("week");
+  const [sleepData, setSleepData] = useState(processSleepData([]));
+  const [entries, setEntries] = useState<SleepEntry[]>([]);
+
+  useEffect(() => {
+    const currentEntries = sleepStorage.getAllEntries();
+    setEntries(currentEntries);
+    setSleepData(processSleepData(currentEntries));
+  }, []);
+
+  // Add an event listener for storage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const currentEntries = sleepStorage.getAllEntries();
+      setEntries(currentEntries);
+      setSleepData(processSleepData(currentEntries));
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-US", {
     weekday: "long",
@@ -96,11 +284,9 @@ export const Dashboard: React.FC = () => {
     day: "numeric",
   });
 
-  const [period, setPeriod] = useState<"week" | "month">("week");
-  const data = period === "week" ? weeklyData : monthlyData;
-  const averages = calculateAverages(data);
-  
-  const LineTooltip = ({ active, payload, label }: any) => {
+  const data = period === "week" ? sleepData.weeklyData : sleepData.monthlyData;
+
+  const LineTooltip = ({ active, payload, label }: LineTooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background border border-border p-3 rounded-md shadow-md">
@@ -113,7 +299,7 @@ export const Dashboard: React.FC = () => {
     return null;
   };
 
-  const BarTooltip: React.FC<TooltipProps<any, any>> = ({ active, payload, label }) => {
+  const BarTooltip: React.FC<BarTooltipProps> = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-background text-foreground border border-border p-3 rounded-md shadow-md">
@@ -128,10 +314,10 @@ export const Dashboard: React.FC = () => {
     }
     return null;
   };
-  
+
 
   return (
-    
+
     <div className="pt-[64px] px-4 sm:px-6 md:px-12 space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
@@ -140,11 +326,12 @@ export const Dashboard: React.FC = () => {
         </div>
         <Link to="/log">
           <Button className="bg-sleep-medium hover:bg-sleep-deep">
-          Log Sleep → 
+          Log Sleep →
           </Button>
         </Link>
       </div>
 
+      {sleepData.lastNight ? (
       <Card className="sleep-card">
         <CardHeader className="pb-2 mb-4">
           <CardTitle>Last Night's Sleep</CardTitle>
@@ -154,7 +341,6 @@ export const Dashboard: React.FC = () => {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            
             <SleepCircle hours={sleepData.lastNight.hours} quality={sleepData.lastNight.quality} />
 
             {/* Sleep Cycle */}
@@ -165,19 +351,19 @@ export const Dashboard: React.FC = () => {
                 <SleepBar
                   label="Deep Sleep"
                   value={sleepData.lastNight.deepSleep}
-                  total={sleepData.lastNight.hours}
+                    total={sleepData.lastNight.hours || 1}
                   color="bg-[#892EFF]"
                 />
                 <SleepBar
                   label="Light Sleep"
                   value={sleepData.lastNight.lightSleep}
-                  total={sleepData.lastNight.hours}
+                    total={sleepData.lastNight.hours || 1}
                   color="bg-[#84BAFD]"
                 />
                 <SleepBar
                   label="REM Sleep"
                   value={sleepData.lastNight.remSleep}
-                  total={sleepData.lastNight.hours}
+                    total={sleepData.lastNight.hours || 1}
                   color="bg-[#C439FF]"
                 />
               </div>
@@ -185,7 +371,15 @@ export const Dashboard: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-  
+      ) : (
+        <Card className="sleep-card">
+          <CardHeader>
+            <CardTitle>No Sleep Data Available</CardTitle>
+            <CardDescription>Log your first sleep entry to see your insights for last night's sleep</CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
     <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
@@ -193,15 +387,16 @@ export const Dashboard: React.FC = () => {
           <p className="text-muted-foreground">View your sleep trends and patterns</p>
         </div>
       </div>
-      
+
       <Tabs defaultValue="week" className="w-full" onValueChange={(value) => setPeriod(value as "week" | "month")}>
         <TabsList className="w-full max-w-xs mx-auto grid grid-cols-2 mb-6">
           <TabsTrigger value="week">Last 7 Days</TabsTrigger>
           <TabsTrigger value="month">Last 30 Days</TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="week" className="space-y-6">
-          {/* Sleep Overview Card */}
+          {data.length > 0 ? (
+            <>
           <Card className="sleep-card">
             <CardHeader>
               <CardTitle>Weekly Sleep Overview</CardTitle>
@@ -210,28 +405,32 @@ export const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={weeklyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                      <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="day" />
+                        <XAxis
+                          dataKey="day"
+                          tick={{ fontSize: 12 }}
+                          interval={0}
+                        />
                     <YAxis yAxisId="left" orientation="left" />
                     <YAxis yAxisId="right" orientation="right" />
                     <Tooltip content={<LineTooltip />} />
                     <Legend />
-                    <Line 
-                      yAxisId="left" 
-                      type="monotone" 
-                      dataKey="hours" 
-                      name="Sleep Hours" 
-                      stroke="#8B5CF6" 
-                      activeDot={{ r: 8 }} 
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="hours"
+                      name="Sleep Hours"
+                          stroke="#892EFF"
+                      activeDot={{ r: 8 }}
                       strokeWidth={2}
                     />
-                    <Line 
-                      yAxisId="right" 
-                      type="monotone" 
-                      dataKey="quality" 
-                      name="Sleep Quality %" 
-                      stroke="#5B21B6" 
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="quality"
+                      name="Sleep Quality %"
+                          stroke="#00CFFF"
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -239,59 +438,8 @@ export const Dashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          
-          {/* Sleep Averages */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="sleep-card">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base">Avg. Sleep Duration</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageHours} hrs</div>
-                <p className="text-xs text-muted-foreground">
-                  {averages.averageHours >= 7 ? "Optimal" : "Below recommended"}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="sleep-card">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base">Avg. Sleep Quality</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageQuality}%</div>
-                <p className="text-xs text-muted-foreground">
-                  {averages.averageQuality >= 80 ? "Excellent" : averages.averageQuality >= 70 ? "Good" : "Fair"}
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="sleep-card">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base">Avg. Deep Sleep</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageDeepSleep} hrs</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((averages.averageDeepSleep / averages.averageHours) * 100)}% of total sleep
-                </p>
-              </CardContent>
-            </Card>
-            
-            <Card className="sleep-card">
-              <CardHeader className="p-4">
-                <CardTitle className="text-base">Avg. REM Sleep</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageRemSleep} hrs</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((averages.averageRemSleep / averages.averageHours) * 100)}% of total sleep
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-          
-          {/* Sleep Stages */}
+
+              {/* Weekly Sleep Stages Bar Graph */}
           <Card className="sleep-card">
             <CardHeader>
               <CardTitle>Weekly Sleep Stages</CardTitle>
@@ -300,7 +448,7 @@ export const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
@@ -314,8 +462,56 @@ export const Dashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-lg">
+                <Card className="sleep-card">
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Avg. Sleep Duration</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="text-3xl font-bold">{sleepData.averages.averageHours} hrs</div>
+                    <div className="text-base text-muted-foreground">Optimal</div>
+                  </CardContent>
+                </Card>
+                <Card className="sleep-card">
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Avg. Sleep Quality</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="text-3xl font-bold">{sleepData.averages.averageQuality}%</div>
+                    <div className="text-base text-muted-foreground">Excellent</div>
+                  </CardContent>
+                </Card>
+                <Card className="sleep-card">
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Avg. Deep Sleep</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="text-3xl font-bold">{sleepData.averages.averageDeep} hrs</div>
+                    <div className="text-base text-muted-foreground">{sleepData.averages.deepPercent}% of total sleep</div>
+                  </CardContent>
+                </Card>
+                <Card className="sleep-card">
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-base">Avg. REM Sleep</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="text-3xl font-bold">{sleepData.averages.averageREM} hrs</div>
+                    <div className="text-base text-muted-foreground">{sleepData.averages.remPercent}% of total sleep</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          ) : (
+            <Card className="sleep-card">
+              <CardHeader>
+                <CardTitle>No Data Available</CardTitle>
+                <CardDescription>Log your sleep to see your weekly patterns</CardDescription>
+              </CardHeader>
+            </Card>
+          )}
         </TabsContent>
-        
+
         <TabsContent value="month" className="space-y-6">
           {/* Monthly Sleep Overview Card */}
           <Card className="sleep-card">
@@ -326,27 +522,27 @@ export const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={monthlyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+                  <LineChart data={sleepData.monthlyData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis yAxisId="left" orientation="left" />
                     <YAxis yAxisId="right" orientation="right" />
                     <Tooltip content={<LineTooltip />} />
                     <Legend />
-                    <Line 
-                      yAxisId="left" 
-                      type="monotone" 
-                      dataKey="hours" 
-                      name="Sleep Hours" 
-                      stroke="#8B5CF6" 
+                    <Line
+                      yAxisId="left"
+                      type="monotone"
+                      dataKey="hours"
+                      name="Sleep Hours"
+                      stroke="#8B5CF6"
                       strokeWidth={2}
                     />
-                    <Line 
-                      yAxisId="right" 
-                      type="monotone" 
-                      dataKey="quality" 
-                      name="Sleep Quality %" 
-                      stroke="#5B21B6" 
+                    <Line
+                      yAxisId="right"
+                      type="monotone"
+                      dataKey="quality"
+                      name="Sleep Quality %"
+                      stroke="#5B21B6"
                       strokeWidth={2}
                     />
                   </LineChart>
@@ -354,58 +550,47 @@ export const Dashboard: React.FC = () => {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Sleep Averages */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-lg">
             <Card className="sleep-card">
               <CardHeader className="p-4">
                 <CardTitle className="text-base">Avg. Sleep Duration</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageHours} hrs</div>
-                <p className="text-xs text-muted-foreground">
-                  {averages.averageHours >= 7 ? "Optimal" : "Below recommended"}
-                </p>
+                <div className="text-3xl font-bold">{sleepData.averages.averageHours} hrs</div>
+                <div className="text-base text-muted-foreground">Optimal</div>
               </CardContent>
             </Card>
-            
             <Card className="sleep-card">
               <CardHeader className="p-4">
                 <CardTitle className="text-base">Avg. Sleep Quality</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageQuality}%</div>
-                <p className="text-xs text-muted-foreground">
-                  {averages.averageQuality >= 80 ? "Excellent" : averages.averageQuality >= 70 ? "Good" : "Fair"}
-                </p>
+                <div className="text-3xl font-bold">{sleepData.averages.averageQuality}%</div>
+                <div className="text-base text-muted-foreground">Excellent</div>
               </CardContent>
             </Card>
-            
             <Card className="sleep-card">
               <CardHeader className="p-4">
                 <CardTitle className="text-base">Avg. Deep Sleep</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageDeepSleep} hrs</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((averages.averageDeepSleep / averages.averageHours) * 100)}% of total sleep
-                </p>
+                <div className="text-3xl font-bold">{sleepData.averages.averageDeep} hrs</div>
+                <div className="text-base text-muted-foreground">{sleepData.averages.deepPercent}% of total sleep</div>
               </CardContent>
             </Card>
-            
             <Card className="sleep-card">
               <CardHeader className="p-4">
                 <CardTitle className="text-base">Avg. REM Sleep</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <div className="text-2xl font-bold">{averages.averageRemSleep} hrs</div>
-                <p className="text-xs text-muted-foreground">
-                  {Math.round((averages.averageRemSleep / averages.averageHours) * 100)}% of total sleep
-                </p>
+                <div className="text-3xl font-bold">{sleepData.averages.averageREM} hrs</div>
+                <div className="text-base text-muted-foreground">{sleepData.averages.remPercent}% of total sleep</div>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Sleep Stages */}
           <Card className="sleep-card">
             <CardHeader>
@@ -415,15 +600,15 @@ export const Dashboard: React.FC = () => {
             <CardContent>
               <div className="h-80">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyData.slice(-7)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart data={sleepData.monthlyData.slice(-7)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="day" />
                     <YAxis />
                     <Tooltip content={<BarTooltip />} />
                     <Legend />
-                    <Bar dataKey="deepSleep" name="Deep Sleep" stackId="a" fill="#1E3A8A" />
-                    <Bar dataKey="lightSleep" name="Light Sleep" stackId="a" fill="#8B5CF6" />
-                    <Bar dataKey="remSleep" name="REM Sleep" stackId="a" fill="#C4B5FD" />
+                    <Bar dataKey="deepSleep" name="Deep Sleep" stackId="a" fill="#892EFF" />
+                    <Bar dataKey="lightSleep" name="Light Sleep" stackId="a" fill="#84BAFD" />
+                    <Bar dataKey="remSleep" name="REM Sleep" stackId="a" fill="#C439FF" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
