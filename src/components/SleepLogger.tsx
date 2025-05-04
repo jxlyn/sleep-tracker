@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,9 +7,13 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Moon, Sun, BedDouble, AlarmClock } from "lucide-react";
+import { sleepStorage, SleepEntry } from "@/lib/sleepStorage";
+import { estimateSleepStages } from "@/lib/sleepCalculations";
+import { useNavigate } from "react-router-dom";
 
 export const SleepLogger: React.FC = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [bedtime, setBedtime] = useState("23:00");
   const [wakeTime, setWakeTime] = useState("07:00");
@@ -22,69 +25,65 @@ export const SleepLogger: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Calculate sleep duration
-    const bedDateTime = new Date(`${date}T${bedtime}`);
-    const wakeDateTime = new Date(`${date}T${wakeTime}`);
-    
-    // Adjust if wake time is on the next day
-    if (wakeDateTime <= bedDateTime) {
-      wakeDateTime.setDate(wakeDateTime.getDate() + 1);
-    }
-    
-    const durationMs = wakeDateTime.getTime() - bedDateTime.getTime();
-    const durationHours = Math.round(durationMs / (1000 * 60 * 60) * 10) / 10;
-    
-    const sleepData = {
-      date,
+
+    // Calculate sleep stages
+    const sleepStages = estimateSleepStages(
       bedtime,
       wakeTime,
-      durationHours,
       sleepQuality,
       sleepInterruptions,
       fellAsleepQuickly,
-      wokeRefreshed,
+      wokeRefreshed
+    );
+
+    // Create sleep entry
+    const sleepEntry: Omit<SleepEntry, 'id'> = {
+      date,
+      bedtime,
+      waketime: wakeTime,
+      sleepQuality,
+      interruptions: sleepInterruptions,
+      fellAsleepQuickly,
+      wokeUpRefreshed: wokeRefreshed,
       notes,
+      sleepStages
     };
-    
-    console.log("Sleep data logged:", sleepData);
-    
+
+    // Save to storage
+    sleepStorage.saveEntry(sleepEntry);
+
+    // Show success message
     toast({
-      title: "Sleep successfully logged",
-      description: `You slept for ${durationHours} hours with ${sleepQuality}% quality`,
+      title: "Sleep logged successfully",
+      description: "Your sleep data has been recorded.",
     });
-    
-    // Reset form or redirect as needed
+
+    // Navigate to dashboard
+    navigate("/");
   };
 
   return (
-    <div className="animate-fade-in max-w-xl mx-auto px-4 md:px-0 space-y-6 pt-[64px]">
-      <div>
-        <h1 className="text-3xl font-bold">Log Your Sleep</h1>
-        <p className="text-muted-foreground">Track your sleep patterns for better insights</p>
-      </div>
-      
-      <form onSubmit={handleSubmit}>
+    <div className="container max-w-2xl mx-auto py-8 px-4">
         <Card className="sleep-card">
           <CardHeader>
-            <CardTitle>Sleep Details</CardTitle>
-            <CardDescription>Enter information about your sleep last night</CardDescription>
+          <CardTitle>Log Your Sleep</CardTitle>
+          <CardDescription>Record your sleep details for better insights</CardDescription>
           </CardHeader>
-          
+        <form onSubmit={handleSubmit}>
           <CardContent className="space-y-6">
-            {/* Date selection */}
+            {/* Date */}
             <div className="space-y-2">
-              <Label htmlFor="sleep-date">Date</Label>
+              <Label htmlFor="date">Date</Label>
               <Input
-                id="sleep-date"
+                id="date"
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 className="w-full"
               />
             </div>
-            
-            {/* Sleep times */}
+
+            {/* Bedtime and Wake Time */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="bedtime" className="flex items-center">
@@ -99,7 +98,7 @@ export const SleepLogger: React.FC = () => {
                   className="w-full"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="wake-time" className="flex items-center">
                   <AlarmClock className="h-4 w-4 mr-2 text-sleep-medium" />
@@ -114,7 +113,7 @@ export const SleepLogger: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             {/* Sleep Quality */}
             <div className="space-y-4">
               <div className="flex justify-between items-center">
@@ -137,7 +136,7 @@ export const SleepLogger: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             {/* Sleep Interruptions */}
             <div className="space-y-2">
               <Label htmlFor="interruptions">Number of Interruptions</Label>
@@ -150,7 +149,7 @@ export const SleepLogger: React.FC = () => {
                 className="w-full"
               />
             </div>
-            
+
             {/* Sleep Experience Toggles */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -166,7 +165,7 @@ export const SleepLogger: React.FC = () => {
                   onCheckedChange={setFellAsleepQuickly}
                 />
               </div>
-              
+
               <div className="flex items-center justify-between">
                 <Label htmlFor="woke-refreshed" className="cursor-pointer">
                   <span className="flex items-center">
@@ -181,27 +180,27 @@ export const SleepLogger: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             {/* Notes */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Additional Notes (optional)</Label>
-              <textarea
+              <Label htmlFor="notes">Notes</Label>
+              <Input
                 id="notes"
+                type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Nightmares, stress, meditation before bed, etc."
-                className="w-full min-h-[100px] p-2 border rounded-md bg-background border-input"
+                placeholder="Any additional notes about your sleep..."
+                className="w-full"
               />
             </div>
           </CardContent>
-          
           <CardFooter>
             <Button type="submit" className="w-full bg-sleep-medium hover:bg-sleep-deep">
               Save Sleep Log
             </Button>
           </CardFooter>
+        </form>
         </Card>
-      </form>
     </div>
   );
 };
