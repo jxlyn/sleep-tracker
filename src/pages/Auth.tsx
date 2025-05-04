@@ -32,7 +32,7 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  
+
   // Check if already authenticated
   useEffect(() => {
     const checkAuth = async () => {
@@ -41,9 +41,9 @@ const Auth = () => {
         navigate("/");
       }
     };
-    
+
     checkAuth();
-    
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -52,12 +52,12 @@ const Auth = () => {
         }
       }
     );
-    
+
     return () => {
       subscription.unsubscribe();
     };
   }, [navigate]);
-  
+
   // Form for login
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -124,8 +124,9 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4">
-      <div className="w-full max-w-md space-y-4">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[url('/dist/log_background.png')] bg-cover bg-no-repeat bg-center p-4">
+      <div className="absolute inset-0 bg-black/50" /> {/* Semi-transparent overlay */}
+      <div className="w-full max-w-md space-y-4 relative z-10">
         <div className="text-center">
           <div className="flex items-center justify-center gap-2 mb-2">
             <Moon className="h-8 w-8 text-sleep-medium" />
@@ -133,10 +134,10 @@ const Auth = () => {
               SlumberGlow
             </h1>
           </div>
-          <p className="text-muted-foreground">Track your sleep patterns for better rest</p>
+          <p className="text-white/90">Track your sleep patterns for better rest</p>
         </div>
-        
-        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl">
+
+        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl backdrop-blur-sm">
           <CardHeader>
             <CardTitle>{isLogin ? "Login" : "Create an account"}</CardTitle>
             <CardDescription>

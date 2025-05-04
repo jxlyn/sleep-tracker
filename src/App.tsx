@@ -13,7 +13,7 @@ import { SignUp } from "./pages/SignUp";
 import { AuthMiddleware } from "./middleware/auth";
 import { AuthProvider } from "@/lib/auth.tsx";
 import DashboardPage from "./pages/DashboardPage";
-import ProfilePage from "./pages/profile";
+import UserProfile from "@/components/UserProfile";
 
 const queryClient = new QueryClient();
 
@@ -58,7 +58,7 @@ const App = () => (
             <Route path="/profile" element={
               <AuthMiddleware>
                 <Layout>
-                  <ProfilePage />
+                  <UserProfile />
                 </Layout>
               </AuthMiddleware>
             } />

@@ -1,23 +1,37 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { User, UserCog } from "lucide-react";
-
+import { User, UserCog, Pencil } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+import { userStorage, UserPreferences } from "@/lib/userStorage";
 import React, { useEffect, useState } from "react";
+import ProfilePage from "@/pages/profile";
 import "./Parallax.css";
 
-export const UserProfile = () => {
-  const userProfile = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    joinedDate: "April 2024",
-    sleepGoal: "8 hours",
-    preferredBedtime: "10:30 PM",
-    avatar: "/placeholder.svg"
-  };
-
+export const UserProfile: React.FC = () => {
+  const { toast } = useToast();
+  const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
   const [rawScrollY, setRawScrollY] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    const preferences = userStorage.getPreferences();
+    setUserPreferences(preferences);
+  }, []);
+
+  const handleSavePreferences = () => {
+    if (userPreferences) {
+      userStorage.updatePreferences(userPreferences);
+      setIsEditing(false);
+      toast({
+        title: "Preferences updated",
+        description: "Your sleep preferences have been saved successfully.",
+      });
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => setRawScrollY(window.scrollY);
@@ -30,7 +44,7 @@ export const UserProfile = () => {
     const smoothScroll = () => {
       setScrollY((prev) => {
         const diff = rawScrollY - prev;
-        return prev + diff * 0.1; // 控制滚动“阻尼”速度
+        return prev + diff * 0.1;
       });
       animationFrame = requestAnimationFrame(smoothScroll);
     };
@@ -38,10 +52,26 @@ export const UserProfile = () => {
     return () => cancelAnimationFrame(animationFrame);
   }, [rawScrollY]);
 
-  // 控制 Nice to meet you, John 的水平移动位置（从右到左）
   const clampedScroll = Math.min(scrollY, window.innerHeight);
   const maxScroll = window.innerHeight;
-  const titleTranslateX = 100 - (clampedScroll / maxScroll) * 160; // 从 100vw 到 -60vw 左侧外
+  const titleTranslateX = 100 - (clampedScroll / maxScroll) * 160;
+
+  const email = typeof window !== 'undefined' ? localStorage.getItem('userEmail') || '' : '';
+
+  if (!userPreferences) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>No User Data</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Please complete your profile setup first.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="onboarding-container">
@@ -67,51 +97,33 @@ export const UserProfile = () => {
           className="parallax-layer parallax-title fixed-title"
           style={{ left: `${titleTranslateX}vw`}}
         >
-          <h1>Good night, {userProfile.name}!</h1>
+          <h1>Good night, {userPreferences.name}!</h1>
         </div>
       </div>
 
       <div className="spacer-block" style={{ height: "130vh" }}></div>
 
-      <div className="after-parallax-text px-4 sm:px-8 space-y-6">
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          User Profile
-        </h1>
-      
-        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl">
-          <CardHeader className="flex flex-row items-center gap-4">
-            <Avatar className="h-16 w-16 ring-2 ring-primary/20">
-              <AvatarImage src={userProfile.avatar} alt={userProfile.name} />
+      <div className="after-parallax-text w-full px-0">
+        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl w-full text-xl p-12">
+          <CardHeader className="flex flex-row items-center gap-8 pb-8 border-b border-border">
+            <Avatar className="h-24 w-24 ring-2 ring-primary/20">
               <AvatarFallback className="bg-secondary">
-                <UserCog className="h-8 w-8 text-primary" />
+                <UserCog className="h-12 w-12 text-primary" />
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-foreground/90">{userProfile.name}</CardTitle>
-              <p className="text-sm text-muted-foreground">Member since {userProfile.joinedDate}</p>
+              <CardTitle className="text-4xl font-extrabold text-foreground/90 mb-2">{userPreferences.name}</CardTitle>
+              <p className="text-2xl text-muted-foreground mb-2">{email}</p>
+              <p className="text-lg text-muted-foreground">Member since {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-6">
-            <div className="grid gap-2">
-              <h3 className="font-medium text-foreground/90">Contact Information</h3>
-              <p className="text-sm text-muted-foreground">{userProfile.email}</p>
-            </div>
-            <div className="grid gap-2">
-              <h3 className="font-medium text-foreground/90">Sleep Preferences</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 rounded-lg bg-secondary/50">
-                  <p className="text-sm font-medium text-foreground/90">Daily Sleep Goal</p>
-                  <p className="text-sm text-muted-foreground">{userProfile.sleepGoal}</p>
-                </div>
-                <div className="p-3 rounded-lg bg-secondary/50">
-                  <p className="text-sm font-medium text-foreground/90">Preferred Bedtime</p>
-                  <p className="text-sm text-muted-foreground">{userProfile.preferredBedtime}</p>
-                </div>
-              </div>
-            </div>
+          <CardContent className="pt-10">
+            <ProfilePage />
           </CardContent>
         </Card>
       </div>
     </div>
   );
-}
+};
+
+export default UserProfile;

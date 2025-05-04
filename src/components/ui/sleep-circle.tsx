@@ -12,8 +12,9 @@ export const SleepCircle: React.FC<SleepCircleProps> = ({ hours, quality }) => {
   const qualityControls = useAnimation();
   const sleepControls = useAnimation();
 
-  const qualityPercent = quality;
-  const sleepPercent = Math.min((hours / 12) * 100, 100);
+  // Ensure hours and quality are valid numbers
+  const qualityPercent = quality || 0;
+  const sleepPercent = Math.min(((hours || 0) / 12) * 100, 100);
 
   useEffect(() => {
     qualityControls.start({ strokeDashoffset: 100 - qualityPercent });
@@ -116,7 +117,7 @@ export const SleepCircle: React.FC<SleepCircleProps> = ({ hours, quality }) => {
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">Total Sleep</span>
           </div>
-          <span className="text-2xl font-bold">{hours}h</span>
+          <span className="text-2xl font-bold">{hours ? hours.toFixed(1) : '0'}h</span>
         </div>
         <div className="flex flex-col items-end">
           <div className="flex items-center gap-1 mb-1">
@@ -124,7 +125,7 @@ export const SleepCircle: React.FC<SleepCircleProps> = ({ hours, quality }) => {
             <Percent className="w-4 h-4 text-muted-foreground" />
           </div>
           <div className="flex items-baseline gap-1 whitespace-nowrap">
-            <span className="text-2xl font-bold">{quality}</span>
+            <span className="text-2xl font-bold">{quality || 0}</span>
             <span className="text-sm text-muted-foreground">/ 100</span>
           </div>
         </div>
