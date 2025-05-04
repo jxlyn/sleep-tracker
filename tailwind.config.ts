@@ -108,5 +108,15 @@ export default {
       },
     },
   },
+  corePlugins: {
+    scrollSnapType: true,
+    scrollSnapAlign: true,
+  },
+  variants: {
+    extend: {
+      scrollSnapType: ["responsive"],
+      scrollSnapAlign: ["responsive"],
+    },
+  },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;

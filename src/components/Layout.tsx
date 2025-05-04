@@ -1,17 +1,21 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { 
-  AlarmClock, 
-  Moon, 
-  Calendar, 
-  Clock, 
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarTrigger,
+  SidebarInset,
+} from "@/components/ui/sidebar"
+import {
+  LogOut,
+  Clock,
+  Moon,
+  AlarmClock,
   User,
-  ArrowLeft,
-  ArrowRight,
-  LogOut
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+} from "lucide-react"
+
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth.tsx";
 
 interface LayoutProps {
@@ -19,104 +23,73 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
+  const location = useLocation()
+  const navigate = useNavigate()
   const { logout } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  const isActivePath = (path: string) => {
-    return location.pathname === path;
-  };
-
+  const isActive = (path: string) => location.pathname === path
   const handleSignOut = () => {
     logout();
     navigate('/login');
   };
 
   const navItems = [
-    { name: "Dashboard", path: "/", icon: <Clock className="w-5 h-5" /> },
+    { name: "Dashboard", path: "/dashboard", icon: <Clock className="w-5 h-5" /> },
     { name: "Log Sleep", path: "/log", icon: <Moon className="w-5 h-5" /> },
     { name: "Assessment", path: "/assessment", icon: <AlarmClock className="w-5 h-5" /> },
-    { name: "Summary", path: "/summary", icon: <Calendar className="w-5 h-5" /> },
     { name: "Profile", path: "/profile", icon: <User className="w-5 h-5" /> },
-  ];
+  ]
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Sidebar */}
-      <div 
-        className={cn(
-          "fixed left-0 top-0 h-full bg-sidebar border-r border-border transition-all duration-300 z-10",
-          sidebarOpen ? "w-64" : "w-16"
-        )}
-      >
-        <div className="flex flex-col h-full">
-          {/* Logo area */}
-          <div className="p-4 border-b border-border flex items-center justify-between">
-            {sidebarOpen && (
-              <h1 className="font-bold text-xl bg-gradient-to-r from-sleep-medium to-sleep-darkBlue bg-clip-text text-transparent">
-                SlumberGlow
-              </h1>
-            )}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-            >
-              {sidebarOpen ? <ArrowLeft className="h-5 w-5" /> : <ArrowRight className="h-5 w-5" />}
-            </Button>
-          </div>
-          
-          {/* Nav links */}
-          <nav className="flex-1 px-2 py-4 space-y-1">
+    <SidebarProvider defaultOpen={false}>
+      {/* Header Bar - Always Visible */}
+      <div className="fixed top-0 left-0 z-50 w-full px-4 py-4 flex items-center gap-2 bg-background/80 backdrop-blur-md">
+        <SidebarTrigger />
+        <h1 className="text-xl font-bold bg-gradient-to-r from-sleep-medium to-sleep-darkBlue bg-clip-text text-transparent">
+          SlumberGlow
+        </h1>
+      </div>
+
+      {/* Sidebar + Main Content */}
+      <div className="flex w-full">
+        <Sidebar className="pt-[64px] px-4">
+          <nav className="space-y-2">
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center px-3 py-2 rounded-lg transition-colors",
-                  isActivePath(item.path) 
-                    ? "bg-primary text-primary-foreground" 
-                    : "hover:bg-sidebar-accent text-sidebar-foreground"
+                  "flex items-center px-3 py-2 rounded-md transition-colors",
+                  isActive(item.path)
+                    ? "bg-primary text-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent"
                 )}
               >
-                <span className="flex items-center justify-center">{item.icon}</span>
-                {sidebarOpen && <span className="ml-3">{item.name}</span>}
+                {item.icon}
+                <span className="ml-3">{item.name}</span>
               </Link>
             ))}
           </nav>
-          
-          {/* Sign Out Button */}
-          <div className="p-4 border-t border-border">
+
+          <div className="mt-auto border-t border-border pt-4">
             <Button
-              variant="ghost"
-              className={cn(
-                "w-full flex items-center px-3 py-2 rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent",
-                !sidebarOpen && "justify-center"
-              )}
               onClick={handleSignOut}
+              className="w-full flex items-center justify-start text-destructive hover:bg-destructive/10"
+              variant="ghost"
             >
               <LogOut className="w-5 h-5" />
-              {sidebarOpen && <span className="ml-3">Sign Out</span>}
+              <span className="ml-3">Sign Out</span>
             </Button>
           </div>
-        </div>
-      </div>
-      
-      {/* Main content */}
-      <div 
-        className={cn(
-          "flex-1 transition-all duration-300",
-          sidebarOpen ? "ml-64" : "ml-16"
-        )}
-      >
-        <main className="p-6">
+        </Sidebar>
+
+        {/* Main Content - SidebarInset should not restrict height or scrolling */}
+        <SidebarInset className="w-full px-0">
           {children}
-        </main>
+        </SidebarInset>
       </div>
-    </div>
-  );
-};
+    </SidebarProvider>
+  )
+}
 
 export default Layout;
