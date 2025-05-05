@@ -110,8 +110,13 @@ export const ProfilePage: React.FC = () => {
 
   // Add logic to get user email and member since (example: from preferences or localStorage)
   const userEmail = localStorage.getItem('userEmail') || 'your@email.com';
-  // For demo, use a static date. Replace with real join date if available.
-  const memberSince = 'May 2025';
+  // Get real registration date
+  const registered = localStorage.getItem('user-registered');
+  let memberSince = 'Unknown';
+  if (registered) {
+    const date = new Date(registered);
+    memberSince = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  }
 
   return (
     <>
@@ -144,14 +149,18 @@ export const ProfilePage: React.FC = () => {
               </div>
               <div className="space-y-1 sm:space-y-4">
                 <Label htmlFor="dailySleepGoal" className="text-xs sm:text-sm font-semibold">Daily Sleep Goal (hours)</Label>
-                <Input
+                <select
                   id="dailySleepGoal"
-                  type="number"
-                  className="text-xs sm:text-sm h-7 sm:h-8 w-full"
                   value={preferences?.dailySleepGoal || 8}
-                  onChange={(e) => setPreferences({ ...preferences!, dailySleepGoal: parseInt(e.target.value) })}
+                  onChange={e => setPreferences({ ...preferences!, dailySleepGoal: parseInt(e.target.value) })}
                   disabled={!isEditing}
-                />
+                  className="text-xs sm:text-sm h-7 sm:h-8 w-full rounded-md border border-input bg-background px-2 py-1"
+                >
+                  {Array.from({ length: 25 }, (_, i) => (
+                    <option key={i} value={i}>{i}</option>
+                  ))}
+                  <option key={24} value={24}>24</option>
+                </select>
               </div>
               <div className="space-y-1 sm:space-y-4">
                 <Label htmlFor="preferredBedtime" className="text-xs sm:text-sm font-semibold">Preferred Bedtime</Label>
