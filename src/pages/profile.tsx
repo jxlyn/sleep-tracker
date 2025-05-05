@@ -12,10 +12,17 @@ export const ProfilePage: React.FC = () => {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   React.useEffect(() => {
     const savedPreferences = userStorage.getPreferences();
     setPreferences(savedPreferences);
+
+    // Get user ID from localStorage or your auth system
+    const storedUserId = localStorage.getItem('user-id');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
   }, []);
 
   const handleSavePreferences = () => {
@@ -30,7 +37,16 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleExportData = () => {
-    const csvContent = sleepStorage.exportToCSV();
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "Please sign in to export data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const csvContent = sleepStorage.exportToCSV(userId);
     if (!csvContent) {
       toast({
         title: "No data to export",
@@ -56,36 +72,39 @@ export const ProfilePage: React.FC = () => {
     });
   };
 
-  const handleImportData = async () => {
-    if (!importFile) {
+  const handleImportData = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!userId) {
       toast({
-        title: "No file selected",
-        description: "Please select a CSV file to import.",
+        title: "Error",
+        description: "Please sign in to import data.",
         variant: "destructive",
       });
       return;
     }
 
-    try {
-      const text = await importFile.text();
-      const result = sleepStorage.importFromCSV(text);
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      toast({
-        title: result.success ? "Import successful" : "Import failed",
-        description: result.message,
-        variant: result.success ? "default" : "destructive",
-      });
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const csvContent = event.target?.result as string;
+      if (!csvContent) return;
 
+      const result = sleepStorage.importFromCSV(csvContent, userId);
       if (result.success) {
-        setImportFile(null);
-      }
-    } catch (error) {
+        toast({
+          title: "Data imported",
+          description: result.message,
+        });
+      } else {
       toast({
         title: "Import failed",
-        description: "An error occurred while importing the file.",
+          description: result.message,
         variant: "destructive",
       });
     }
+    };
+    reader.readAsText(file);
   };
 
   return (
@@ -158,11 +177,10 @@ export const ProfilePage: React.FC = () => {
                   <Input
                     type="file"
                     accept=".csv"
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                    onChange={handleImportData}
                     className="flex-1 text-sm h-8"
                   />
                   <Button
-                    onClick={handleImportData}
                     variant="outline"
                     disabled={!importFile}
                     className="text-sm h-8"

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,27 @@ export const SleepLogger: React.FC = () => {
   const [fellAsleepQuickly, setFellAsleepQuickly] = useState(true);
   const [wokeRefreshed, setWokeRefreshed] = useState(true);
   const [notes, setNotes] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get user ID from localStorage or your auth system
+    const storedUserId = localStorage.getItem('user-id');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "Please sign in to log sleep data.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Calculate sleep stages
     const sleepStages = estimateSleepStages(
@@ -50,7 +68,7 @@ export const SleepLogger: React.FC = () => {
     };
 
     // Save to storage
-    sleepStorage.saveEntry(sleepEntry);
+    sleepStorage.saveEntry(sleepEntry, userId);
 
     // Show success message
     toast({

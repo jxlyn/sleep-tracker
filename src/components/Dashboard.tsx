@@ -90,12 +90,30 @@ const processSleepData = (entries: SleepEntry[]) => {
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
 
   const lastNightEntry = sortedEntries.find(entry => {
-    const entryDate = new Date(entry.date);
-    entryDate.setHours(0, 0, 0, 0);
-    return entryDate.getTime() === yesterday.getTime();
+    const entryDateStr = entry.date.split('T')[0];
+    return entryDateStr === yesterdayStr;
   });
+
+  // If no entry found for yesterday, try to find the most recent entry before yesterday
+  if (!lastNightEntry) {
+    const mostRecentEntry = sortedEntries
+      .filter(entry => {
+        const entryDate = new Date(entry.date);
+        entryDate.setHours(0, 0, 0, 0);
+        return entryDate.getTime() < yesterday.getTime();
+      })
+      .pop();
+    if (mostRecentEntry) {
+      const mostRecentDate = new Date(mostRecentEntry.date);
+      mostRecentDate.setHours(0, 0, 0, 0);
+      if (mostRecentDate.getTime() === yesterday.getTime() - 86400000) { // 86400000 ms = 1 day
+        return mostRecentEntry;
+      }
+    }
+  }
 
   // Process weekly data
   const oneWeekAgo = new Date();
@@ -282,24 +300,32 @@ export const Dashboard: React.FC = () => {
   const [period, setPeriod] = useState<"week" | "month">("week");
   const [sleepData, setSleepData] = useState(processSleepData([]));
   const [entries, setEntries] = useState<SleepEntry[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const currentEntries = sleepStorage.getAllEntries();
-    setEntries(currentEntries);
-    setSleepData(processSleepData(currentEntries));
+    // Get user ID from localStorage or your auth system
+    const storedUserId = localStorage.getItem('user-id');
+    if (storedUserId) {
+      setUserId(storedUserId);
+      const currentEntries = sleepStorage.getAllEntries(storedUserId);
+      setEntries(currentEntries);
+      setSleepData(processSleepData(currentEntries));
+    }
   }, []);
 
   // Add an event listener for storage changes
   useEffect(() => {
     const handleStorageChange = () => {
-      const currentEntries = sleepStorage.getAllEntries();
-      setEntries(currentEntries);
-      setSleepData(processSleepData(currentEntries));
+      if (userId) {
+        const currentEntries = sleepStorage.getAllEntries(userId);
+        setEntries(currentEntries);
+        setSleepData(processSleepData(currentEntries));
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, []);
+  }, [userId]);
 
   const today = new Date();
   const formattedDate = today.toLocaleDateString("en-US", {
@@ -398,8 +424,8 @@ export const Dashboard: React.FC = () => {
       ) : (
         <Card className="sleep-card">
           <CardHeader>
-            <CardTitle>No Sleep Data Available</CardTitle>
-            <CardDescription>Log your first sleep entry to see your insights for last night's sleep</CardDescription>
+            <CardTitle>No Sleep Data Available For Last Night</CardTitle>
+            <CardDescription>Add your sleep entry for last night to view your insights.</CardDescription>
           </CardHeader>
         </Card>
       )}

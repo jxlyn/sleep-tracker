@@ -41,8 +41,8 @@ const estimateSleepStagesFixed = (totalSleep: number, fellAsleepQuickly: boolean
 
 export const sleepStorage = {
   // Save a new sleep entry
-  saveEntry: (entry: Omit<SleepEntry, 'id'>) => {
-    const entries = sleepStorage.getAllEntries();
+  saveEntry: (entry: Omit<SleepEntry, 'id'>, userId: string) => {
+    const entries = sleepStorage.getAllEntries(userId);
 
     // Check if there's an existing entry with the same date, bedtime, and waketime
     const existingEntryIndex = entries.findIndex(
@@ -74,19 +74,19 @@ export const sleepStorage = {
       return a.waketime.localeCompare(b.waketime);
     });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    localStorage.setItem(`${STORAGE_KEY}-${userId}`, JSON.stringify(entries));
     return newEntry;
   },
 
   // Get all sleep entries
-  getAllEntries: (): SleepEntry[] => {
-    const data = localStorage.getItem(STORAGE_KEY);
+  getAllEntries: (userId: string): SleepEntry[] => {
+    const data = localStorage.getItem(`${STORAGE_KEY}-${userId}`);
     return data ? JSON.parse(data) : [];
   },
 
   // Get entries for a specific date range
-  getEntriesByDateRange: (startDate: string, endDate: string): SleepEntry[] => {
-    const entries = sleepStorage.getAllEntries();
+  getEntriesByDateRange: (startDate: string, endDate: string, userId: string): SleepEntry[] => {
+    const entries = sleepStorage.getAllEntries(userId);
     return entries.filter(entry => {
       const entryDate = new Date(entry.date);
       return entryDate >= new Date(startDate) && entryDate <= new Date(endDate);
@@ -94,27 +94,27 @@ export const sleepStorage = {
   },
 
   // Update an existing entry
-  updateEntry: (id: string, updatedEntry: Partial<SleepEntry>) => {
-    const entries = sleepStorage.getAllEntries();
+  updateEntry: (id: string, updatedEntry: Partial<SleepEntry>, userId: string) => {
+    const entries = sleepStorage.getAllEntries(userId);
     const index = entries.findIndex(entry => entry.id === id);
     if (index !== -1) {
       entries[index] = { ...entries[index], ...updatedEntry };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+      localStorage.setItem(`${STORAGE_KEY}-${userId}`, JSON.stringify(entries));
       return entries[index];
     }
     return null;
   },
 
   // Delete an entry
-  deleteEntry: (id: string) => {
-    const entries = sleepStorage.getAllEntries();
+  deleteEntry: (id: string, userId: string) => {
+    const entries = sleepStorage.getAllEntries(userId);
     const filteredEntries = entries.filter(entry => entry.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filteredEntries));
+    localStorage.setItem(`${STORAGE_KEY}-${userId}`, JSON.stringify(filteredEntries));
   },
 
   // Export sleep entries to CSV
-  exportToCSV: (): string => {
-    const entries = sleepStorage.getAllEntries();
+  exportToCSV: (userId: string): string => {
+    const entries = sleepStorage.getAllEntries(userId);
     if (entries.length === 0) return '';
 
     // Create a map to store unique entries (by date, bedtime, waketime)
@@ -173,7 +173,7 @@ export const sleepStorage = {
   },
 
   // Import sleep entries from CSV
-  importFromCSV: (csvContent: string): { success: boolean; message: string } => {
+  importFromCSV: (csvContent: string, userId: string): { success: boolean; message: string } => {
     try {
       const lines = csvContent.split('\n');
       if (lines.length < 2) {
@@ -225,7 +225,7 @@ export const sleepStorage = {
       }
 
       // Save all imported entries
-      entries.forEach(entry => sleepStorage.saveEntry(entry));
+      entries.forEach(entry => sleepStorage.saveEntry(entry, userId));
 
       return {
         success: true,
