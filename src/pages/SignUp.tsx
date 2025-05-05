@@ -31,30 +31,30 @@ export const SignUp = () => {
     }
 
     try {
-      // Store user credentials (in a real app, this would be handled by a backend)
+      // store user credentials
       localStorage.setItem('userEmail', email);
       localStorage.setItem('userPassword', password);
 
-      // Generate a unique user ID
+      // Generate user ID
       const userId = crypto.randomUUID();
       localStorage.setItem('user-id', userId);
-      // Store registration date
+      //registration date
       localStorage.setItem('user-registered', new Date().toISOString());
 
-      // Save user preferences
+      //user preferences
       userStorage.savePreferences({
         name,
         dailySleepGoal,
         preferredBedtime,
       });
 
-      // Log the user in
-      await login(email, password);
+      //log the user in
+      //await login(email, password);
       setSuccess(true);
 
-      // Redirect to dashboard after a short delay
+      //redirect to login
       setTimeout(() => {
-        navigate('/');
+        navigate('/login');
       }, 2000);
     } catch (err) {
       setError('Registration failed. Please try again.');

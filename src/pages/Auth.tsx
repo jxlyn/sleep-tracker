@@ -12,13 +12,12 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useEffect } from "react";
 
-// Form schema for login with no validation requirements
+//login form schema 
 const loginSchema = z.object({
   email: z.string().optional(),
   password: z.string().optional(),
 });
 
-// Form schema for signup with password confirmation but no other requirements
 const signupSchema = z.object({
   email: z.string().optional(),
   password: z.string().optional(),
@@ -33,7 +32,7 @@ const Auth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Check if already authenticated
+  //check authentication status
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getSession();
@@ -44,7 +43,7 @@ const Auth = () => {
 
     checkAuth();
 
-    // Listen for auth changes
+    //for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (session) {
@@ -58,7 +57,7 @@ const Auth = () => {
     };
   }, [navigate]);
 
-  // Form for login
+  //login form
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -67,7 +66,7 @@ const Auth = () => {
     },
   });
 
-  // Form for signup
+  //signup form
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
@@ -77,13 +76,13 @@ const Auth = () => {
     },
   });
 
-  // Handle login submission
+  //login submission
   const onLoginSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email: values.email || "dummy@example.com", // Provide default value if empty
-        password: values.password || "dummypassword", // Provide default value if empty
+        email: values.email || "dummy@example.com", 
+        password: values.password || "dummypassword",
       });
 
       if (error) {
@@ -100,13 +99,13 @@ const Auth = () => {
     }
   };
 
-  // Handle signup submission
+  //signup submission
   const onSignupSubmit = async (values: z.infer<typeof signupSchema>) => {
     setIsLoading(true);
     try {
       const { error } = await supabase.auth.signUp({
-        email: values.email || "dummy@example.com", // Provide default value if empty
-        password: values.password || "dummypassword", // Provide default value if empty
+        email: values.email || "dummy@example.com",
+        password: values.password || "dummypassword", 
       });
 
       if (error) {

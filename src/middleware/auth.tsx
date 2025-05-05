@@ -10,7 +10,7 @@ export const AuthMiddleware = ({ children }: AuthMiddlewareProps) => {
   const { isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
-    // Redirect to login page but save the attempted URL
+    // redirect to login page
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 

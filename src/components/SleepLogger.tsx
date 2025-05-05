@@ -25,7 +25,7 @@ export const SleepLogger: React.FC = () => {
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    // Get user ID from localStorage or your auth system
+    //get user ID from localStorage
     const storedUserId = localStorage.getItem('user-id');
     if (storedUserId) {
       setUserId(storedUserId);
@@ -67,19 +67,17 @@ export const SleepLogger: React.FC = () => {
       sleepStages
     };
 
-    // Save to storage
+    // Save
     sleepStorage.saveEntry(sleepEntry, userId);
-
-    // Show success message
     toast({
       title: "Sleep logged successfully",
       description: "Your sleep data has been recorded.",
     });
 
-    // Wait 1 second, then navigate
+    // Wait 1 second, then redirect to dashboard
     setTimeout(() => {
-      navigate("/");
-    }, 1000);
+      navigate("/dashboard");
+    }, 1500);
   };
 
   return (
