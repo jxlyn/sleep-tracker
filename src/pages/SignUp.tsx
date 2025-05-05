@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Link } from 'react-router-dom';
 import { userStorage } from '@/lib/userStorage';
+import { useAuth } from '@/lib/auth.tsx';
 
 export const SignUp = () => {
   const [name, setName] = useState('');
@@ -17,6 +18,7 @@ export const SignUp = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,6 +35,10 @@ export const SignUp = () => {
       localStorage.setItem('userEmail', email);
       localStorage.setItem('userPassword', password);
 
+      // Generate a unique user ID
+      const userId = crypto.randomUUID();
+      localStorage.setItem('user-id', userId);
+
       // Save user preferences
       userStorage.savePreferences({
         name,
@@ -40,11 +46,13 @@ export const SignUp = () => {
         preferredBedtime,
       });
 
+      // Log the user in
+      await login(email, password);
       setSuccess(true);
 
-      // Redirect to login page after a short delay
+      // Redirect to dashboard after a short delay
       setTimeout(() => {
-        navigate('/login');
+        navigate('/');
       }, 2000);
     } catch (err) {
       setError('Registration failed. Please try again.');
@@ -52,21 +60,26 @@ export const SignUp = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <Card className="w-[400px]">
-        <CardHeader>
-          <CardTitle>Create an Account</CardTitle>
-          <CardDescription>Enter your details to get started</CardDescription>
-        </CardHeader>
-        <CardContent>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[url('/login_background.png')] bg-cover bg-no-repeat bg-center p-2 sm:p-4">
+      <div className="w-full max-w-md space-y-2 sm:space-y-4">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="inline-block h-8 w-8 bg-gradient-to-r from-sleep-medium to-sleep-darkBlue rounded-full" />
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-sleep-medium to-sleep-darkBlue bg-clip-text text-transparent">
+              SlumberGlow
+            </h1>
+          </div>
+          <p className="text-white">Create your account to start tracking your sleep</p>
+        </div>
+        <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl backdrop-blur-sm w-full p-4 sm:p-8">
           {error && <div className="text-red-500 mb-4">{error}</div>}
           {success && (
             <div className="text-green-500 mb-4">
-              Registration successful! Redirecting to login...
+              Account created successfully! Redirecting...
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleSubmit} className="space-y-2 sm:space-y-4">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
@@ -75,9 +88,10 @@ export const SignUp = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
+                className="text-lg h-12 w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
@@ -86,9 +100,10 @@ export const SignUp = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="text-lg h-12 w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -97,9 +112,10 @@ export const SignUp = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="text-lg h-12 w-full"
               />
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
                 id="confirmPassword"
@@ -108,43 +124,45 @@ export const SignUp = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                className="text-lg h-12 w-full"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="sleepGoal">Daily Sleep Goal (hours)</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="dailySleepGoal">Daily Sleep Goal (hours)</Label>
               <Input
-                id="sleepGoal"
+                id="dailySleepGoal"
                 type="number"
-                min="4"
-                max="12"
-                step="0.5"
                 value={dailySleepGoal}
                 onChange={(e) => setDailySleepGoal(Number(e.target.value))}
+                min="4"
+                max="12"
                 required
+                className="text-lg h-12 w-full"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="bedtime">Preferred Bedtime</Label>
+            <div className="space-y-1 sm:space-y-2">
+              <Label htmlFor="preferredBedtime">Preferred Bedtime</Label>
               <Input
-                id="bedtime"
+                id="preferredBedtime"
                 type="time"
                 value={preferredBedtime}
                 onChange={(e) => setPreferredBedtime(e.target.value)}
                 required
+                className="text-lg h-12 w-full"
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full bg-sleep-medium hover:bg-sleep-deep">
               Sign Up
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
             Already have an account?{' '}
-            <Link to="/login" className="text-blue-500 hover:underline">
-              Log in
+            <Link to="/login" className="text-sleep-medium hover:text-sleep-deep">
+              Sign in
             </Link>
           </div>
-        </CardContent>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 };

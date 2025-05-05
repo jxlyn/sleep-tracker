@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,9 +22,27 @@ export const SleepLogger: React.FC = () => {
   const [fellAsleepQuickly, setFellAsleepQuickly] = useState(true);
   const [wokeRefreshed, setWokeRefreshed] = useState(true);
   const [notes, setNotes] = useState("");
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Get user ID from localStorage or your auth system
+    const storedUserId = localStorage.getItem('user-id');
+    if (storedUserId) {
+      setUserId(storedUserId);
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "Please sign in to log sleep data.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Calculate sleep stages
     const sleepStages = estimateSleepStages(
@@ -50,7 +68,7 @@ export const SleepLogger: React.FC = () => {
     };
 
     // Save to storage
-    sleepStorage.saveEntry(sleepEntry);
+    sleepStorage.saveEntry(sleepEntry, userId);
 
     // Show success message
     toast({
@@ -58,19 +76,21 @@ export const SleepLogger: React.FC = () => {
       description: "Your sleep data has been recorded.",
     });
 
-    // Navigate to dashboard
-    navigate("/");
+    // Wait 1 second, then navigate
+    setTimeout(() => {
+      navigate("/");
+    }, 1000);
   };
 
   return (
-    <div className="container max-w-2xl mx-auto py-8 px-4">
-        <Card className="sleep-card">
+    <div className="w-full max-w-2xl mx-auto py-4 px-2 sm:py-8 sm:px-4">
+        <Card className="sleep-card w-full">
           <CardHeader>
           <CardTitle>Log Your Sleep</CardTitle>
           <CardDescription>Record your sleep details for better insights</CardDescription>
           </CardHeader>
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-4 sm:space-y-6">
             {/* Date */}
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
@@ -84,7 +104,7 @@ export const SleepLogger: React.FC = () => {
             </div>
 
             {/* Bedtime and Wake Time */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-4">
               <div className="space-y-2">
                 <Label htmlFor="bedtime" className="flex items-center">
                   <BedDouble className="h-4 w-4 mr-2 text-sleep-medium" />
@@ -115,12 +135,12 @@ export const SleepLogger: React.FC = () => {
             </div>
 
             {/* Sleep Quality */}
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               <div className="flex justify-between items-center">
                 <Label>Sleep Quality</Label>
                 <span className="text-lg font-semibold">{sleepQuality}%</span>
               </div>
-              <div className="py-4">
+              <div className="py-2 sm:py-4">
                 <Slider
                   value={[sleepQuality]}
                   min={0}
@@ -151,7 +171,7 @@ export const SleepLogger: React.FC = () => {
             </div>
 
             {/* Sleep Experience Toggles */}
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="fell-asleep" className="cursor-pointer">
                   <span className="flex items-center">
