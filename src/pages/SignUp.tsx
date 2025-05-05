@@ -136,10 +136,11 @@ export const SignUp = () => {
                 value={dailySleepGoal}
                 onChange={e => setDailySleepGoal(Number(e.target.value))}
                 required
-                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
+                className="text-base h-12 w-full rounded-md border border-input bg-background px-3 py-1 appearance-none leading-tight"
+                style={{ fontSize: '1rem' }}
               >
                 {Array.from({ length: 25 }, (_, i) => (
-                  <option key={i} value={i}>{i}</option>
+                  <option key={i} value={i} style={{ fontSize: '1rem' }}>{i}</option>
                 ))}
               </select>
             </div>
