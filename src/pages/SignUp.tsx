@@ -38,6 +38,8 @@ export const SignUp = () => {
       // Generate a unique user ID
       const userId = crypto.randomUUID();
       localStorage.setItem('user-id', userId);
+      // Store registration date
+      localStorage.setItem('user-registered', new Date().toISOString());
 
       // Save user preferences
       userStorage.savePreferences({
@@ -88,7 +90,7 @@ export const SignUp = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="text-lg h-12 w-full"
+                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
               />
             </div>
             <div className="space-y-1 sm:space-y-2">
@@ -100,7 +102,7 @@ export const SignUp = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="text-lg h-12 w-full"
+                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
               />
             </div>
             <div className="space-y-1 sm:space-y-2">
@@ -112,7 +114,7 @@ export const SignUp = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="text-lg h-12 w-full"
+                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
               />
             </div>
             <div className="space-y-1 sm:space-y-2">
@@ -124,21 +126,22 @@ export const SignUp = () => {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
-                className="text-lg h-12 w-full"
+                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
               />
             </div>
             <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="dailySleepGoal">Daily Sleep Goal (hours)</Label>
-              <Input
+              <select
                 id="dailySleepGoal"
-                type="number"
                 value={dailySleepGoal}
-                onChange={(e) => setDailySleepGoal(Number(e.target.value))}
-                min="0"
-                max="24"
+                onChange={e => setDailySleepGoal(Number(e.target.value))}
                 required
-                className="text-lg h-12 w-full"
-              />
+                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
+              >
+                {Array.from({ length: 25 }, (_, i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1 sm:space-y-2">
               <Label htmlFor="preferredBedtime">Preferred Bedtime</Label>
@@ -148,7 +151,7 @@ export const SignUp = () => {
                 value={preferredBedtime}
                 onChange={(e) => setPreferredBedtime(e.target.value)}
                 required
-                className="text-lg h-12 w-full"
+                className="text-lg h-12 w-full rounded-md border border-input bg-background px-3 py-2"
               />
             </div>
             <Button type="submit" className="w-full bg-sleep-medium hover:bg-sleep-deep">
