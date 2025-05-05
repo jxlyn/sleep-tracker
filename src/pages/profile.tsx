@@ -159,7 +159,6 @@ export const ProfilePage: React.FC = () => {
                   {Array.from({ length: 25 }, (_, i) => (
                     <option key={i} value={i}>{i}</option>
                   ))}
-                  <option key={24} value={24}>24</option>
                 </select>
               </div>
               <div className="space-y-1 sm:space-y-4">
