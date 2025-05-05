@@ -131,7 +131,7 @@ export const ProfilePage: React.FC = () => {
           </CardHeader>
           <CardContent className="space-y-3 sm:space-y-8 text-xs">
             <div className="space-y-2 sm:space-y-6 max-w-md mx-auto">
-              <h3 className="text-sm sm:text-base font-bold">User Preferences</h3>
+              <h3 className="text-sm sm:text-base font-bold mt-6">User Preferences</h3>
               <div className="space-y-1 sm:space-y-4">
                 <Label htmlFor="name" className="text-xs sm:text-sm font-semibold">Name</Label>
                 <Input
