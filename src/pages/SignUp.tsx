@@ -134,8 +134,8 @@ export const SignUp = () => {
                 type="number"
                 value={dailySleepGoal}
                 onChange={(e) => setDailySleepGoal(Number(e.target.value))}
-                min="4"
-                max="12"
+                min="0"
+                max="24"
                 required
                 className="text-lg h-12 w-full"
               />
