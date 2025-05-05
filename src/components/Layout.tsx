@@ -5,6 +5,7 @@ import {
   Sidebar,
   SidebarTrigger,
   SidebarInset,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   LogOut,
@@ -20,6 +21,32 @@ import { useAuth } from "@/lib/auth.tsx";
 
 interface LayoutProps {
   children: React.ReactNode;
+}
+
+function SidebarNav({ navItems, isActive }) {
+  const sidebar = useSidebar();
+  return (
+    <nav className="space-y-2">
+      {navItems.map((item) => (
+        <Link
+          key={item.path}
+          to={item.path}
+          className={cn(
+            "flex items-center px-3 py-2 rounded-md transition-colors",
+            isActive(item.path)
+              ? "bg-primary text-primary-foreground"
+              : "text-sidebar-foreground hover:bg-sidebar-accent"
+          )}
+          onClick={() => {
+            if (sidebar?.isMobile) sidebar.setOpenMobile(false);
+          }}
+        >
+          {item.icon}
+          <span className="ml-3">{item.name}</span>
+        </Link>
+      ))}
+    </nav>
+  );
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
@@ -53,24 +80,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar + Main Content */}
       <div className="flex w-full">
         <Sidebar className="pt-[64px] px-4">
-          <nav className="space-y-2">
-            {navItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  "flex items-center px-3 py-2 rounded-md transition-colors",
-                  isActive(item.path)
-                    ? "bg-primary text-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent"
-                )}
-              >
-                {item.icon}
-                <span className="ml-3">{item.name}</span>
-              </Link>
-            ))}
-          </nav>
-
+          <SidebarNav navItems={navItems} isActive={isActive} />
           <div className="mt-auto border-t border-border pt-4">
             <Button
               onClick={handleSignOut}
@@ -82,8 +92,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </Button>
           </div>
         </Sidebar>
-
-        {/* Main Content - SidebarInset should not restrict height or scrolling */}
         <SidebarInset className="w-full px-0">
           {children}
         </SidebarInset>
