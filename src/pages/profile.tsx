@@ -123,7 +123,7 @@ export const ProfilePage: React.FC = () => {
         <div className="text-base text-muted-foreground">{userEmail}</div>
         <div className="text-sm text-muted-foreground">Member since {memberSince}</div>
       </div>
-      <div className="w-full max-w-2xl mx-auto py-1 px-2 sm:py-8 sm:px-4">
+      <div className="w-full max-w-4xl mx-auto py-1 px-2 sm:py-8 sm:px-4">
         <Card className="sleep-card w-full">
           <CardHeader className="pb-1">
             <CardTitle className="text-sm sm:text-lg">Profile Settings</CardTitle>
@@ -193,7 +193,7 @@ export const ProfilePage: React.FC = () => {
                       type="file"
                       accept=".csv"
                       onChange={handleImportData}
-                      className="flex-1 text-xs h-7"
+                      className="flex-1 text-xs h-9"
                     />
                     <Button
                       variant="outline"
