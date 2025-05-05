@@ -81,6 +81,15 @@ export const SleepLogger: React.FC = () => {
   };
 
   return (
+    <>
+      <style>
+        {`
+          input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+          }
+        `}
+      </style>
+
     <div className="w-full max-w-2xl mx-auto py-4 px-2 sm:py-8 sm:px-4">
         <Card className="sleep-card w-full">
           <CardHeader>
@@ -220,6 +229,7 @@ export const SleepLogger: React.FC = () => {
         </form>
         </Card>
     </div>
+    </>
   );
 };
 
