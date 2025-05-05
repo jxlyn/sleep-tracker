@@ -105,18 +105,6 @@ export const UserProfile: React.FC = () => {
 
       <div className="after-parallax-text w-full px-0">
         <Card className="border-border/50 bg-gradient-to-b from-card/95 to-card shadow-xl w-full text-xl p-12">
-          <CardHeader className="flex flex-row items-center gap-8 pb-8 border-b border-border">
-            <Avatar className="h-24 w-24 ring-2 ring-primary/20">
-              <AvatarFallback className="bg-secondary">
-                <UserCog className="h-12 w-12 text-primary" />
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <CardTitle className="text-4xl font-extrabold text-foreground/90 mb-2">{userPreferences.name}</CardTitle>
-              <p className="text-2xl text-muted-foreground mb-2">{email}</p>
-              <p className="text-lg text-muted-foreground">Member since {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</p>
-            </div>
-          </CardHeader>
           <CardContent className="pt-10">
             <ProfilePage />
           </CardContent>
