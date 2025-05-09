@@ -13,17 +13,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Check authentication status on mount and when storage changes
   useEffect(() => {
-    // Check if user is already logged in
-    const auth = localStorage.getItem('isAuthenticated');
-    const storedUserId = localStorage.getItem('user-id');
-    setIsAuthenticated(auth === 'true');
-    setUserId(storedUserId);
+    const checkAuth = () => {
+      const auth = localStorage.getItem('isAuthenticated');
+      const storedUserId = localStorage.getItem('user-id');
+      const storedEmail = localStorage.getItem('userEmail');
+      const storedPassword = localStorage.getItem('userPassword');
+
+      if (auth === 'true' && storedUserId && storedEmail && storedPassword) {
+        setIsAuthenticated(true);
+        setUserId(storedUserId);
+      } else {
+        setIsAuthenticated(false);
+        setUserId(null);
+      }
+    };
+
+    // Check auth on mount
+    checkAuth();
+
+    // Listen for storage changes
+    window.addEventListener('storage', checkAuth);
+
+    return () => {
+      window.removeEventListener('storage', checkAuth);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
-    // TODO: Implement actual authentication logic here
-    // For now, we'll just simulate a successful login
     const storedEmail = localStorage.getItem('userEmail');
     const storedPassword = localStorage.getItem('userPassword');
 
@@ -35,7 +53,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem('user-id', userID);
       }
 
+      // Store all auth data
       localStorage.setItem('isAuthenticated', 'true');
+      localStorage.setItem('userEmail', email);
+      localStorage.setItem('userPassword', password);
+
       setIsAuthenticated(true);
       setUserId(userID);
     } else {
@@ -44,10 +66,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
-    // Only remove the authentication status, keep the user ID
+    // Clear all auth-related data
     localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('userEmail');
+    localStorage.removeItem('userPassword');
+    // Don't remove user-id to maintain user data persistence
+
     setIsAuthenticated(false);
-    // Don't remove the user ID or clear the userId state
+    setUserId(null);
   };
 
   const value = {
