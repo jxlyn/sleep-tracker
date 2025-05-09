@@ -10,10 +10,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    // Initialize state from localStorage
+    const auth = localStorage.getItem('isAuthenticated');
+    const storedUserId = localStorage.getItem('user-id');
+    const storedEmail = localStorage.getItem('userEmail');
+    const storedPassword = localStorage.getItem('userPassword');
+    return auth === 'true' && !!storedUserId && !!storedEmail && !!storedPassword;
+  });
 
-  // Check authentication status on mount and when storage changes
+  const [userId, setUserId] = useState<string | null>(() => {
+    return localStorage.getItem('user-id');
+  });
+
+  // Check authentication status on mount
   useEffect(() => {
     const checkAuth = () => {
       const auth = localStorage.getItem('isAuthenticated');
@@ -32,46 +42,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Check auth on mount
     checkAuth();
-
-    // Listen for storage changes
-    window.addEventListener('storage', checkAuth);
-
-    return () => {
-      window.removeEventListener('storage', checkAuth);
-    };
   }, []);
 
   const login = async (email: string, password: string) => {
+    // First check if this is a new login attempt
     const storedEmail = localStorage.getItem('userEmail');
     const storedPassword = localStorage.getItem('userPassword');
+    const storedUserId = localStorage.getItem('user-id');
 
-    if (email === storedEmail && password === storedPassword) {
-      // Get the existing user ID or generate a new one if it doesn't exist
-      let userID = localStorage.getItem('user-id');
-      if (!userID) {
-        userID = crypto.randomUUID();
-        localStorage.setItem('user-id', userID);
-      }
-
-      // Store all auth data
+    // If credentials match, use the existing user ID
+    if (email === storedEmail && password === storedPassword && storedUserId) {
       localStorage.setItem('isAuthenticated', 'true');
+      setIsAuthenticated(true);
+      setUserId(storedUserId);
+      return;
+    }
+
+    // If no stored credentials exist or they don't match, this is a new user
+    if (!storedEmail || !storedPassword || email !== storedEmail || password !== storedPassword) {
+      // Store the new credentials
       localStorage.setItem('userEmail', email);
       localStorage.setItem('userPassword', password);
-
+      const newUserId = crypto.randomUUID();
+      localStorage.setItem('user-id', newUserId);
+      localStorage.setItem('isAuthenticated', 'true');
       setIsAuthenticated(true);
-      setUserId(userID);
-    } else {
-      throw new Error('Invalid credentials');
+      setUserId(newUserId);
+      return;
     }
+
+    throw new Error('Invalid credentials');
   };
 
   const logout = () => {
-    // Clear all auth-related data
+    // Only remove authentication status, keep user ID and data
     localStorage.removeItem('isAuthenticated');
-    localStorage.removeItem('userEmail');
-    localStorage.removeItem('userPassword');
-    // Don't remove user-id to maintain user data persistence
-
     setIsAuthenticated(false);
     setUserId(null);
   };
